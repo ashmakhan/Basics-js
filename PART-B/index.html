@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+</body>
+<script>
+       //PART-B
+
+// Swap using a temporary variable
+let x = 5;
+let  = 10;
+
+console.log("Before swap: a =", a, "b =", b);
+let temp = a;
+a = b;
+b = temp;
+console.log("After swap:  a =", a, "b =", b);
+
+//Factorial of a number using a loop
+function factorial(n) {
+  if (n < 0) return undefined; // factorial not defined for negatives
+  let result = 1;
+  for (let i = 2; i <= n; i++) {
+    result *= i;
+  }
+  return result;
+}
+
+//Print multiplication table of a given number
+function multiplicationTable(number, upto = 10) {
+  for (let i = 1; i <= upto; i++) {
+    console.log(`${number} x ${i} = ${number * i}`);
+  }
+}
+
+
+
+//Reverse a number
+function reverseNumber(num) {
+  const sign = num < 0 ? -1 : 1;
+  num = Math.abs(Math.trunc(num)); // ensure integer
+  let rev = 0;
+  while (num > 0) {
+    rev = rev * 10 + (num % 10);
+    num = Math.trunc(num / 10);
+  }
+  return sign * rev;
+}
+
+console.log(reverseNumber(123));   // 321
+console.log(reverseNumber(-450));  // -54
+console.log(reverseNumber(1200));  // 21
+
+//function isLeapYear(year)  
+{
+  // Gregorian leap year rule:
+  // divisible by 4 and (not divisible by 100 unless also divisible by 400)
+  if (year % 400 === 0) return true;
+  if (year % 100 === 0) return false;
+  return year % 4 === 0;
+}
+
+// Examples:
+console.log(isLeapYear(2000)); // true
+console.log(isLeapYear(1900)); // false
+console.log(isLeapYear(2024)); // true
+console.log(isLeapYear(2023)); // false
+
+</script>
+</html>
