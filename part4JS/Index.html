@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GitHub User Search (API) - Assignment</title>
+  <style>
+    body{margin:0;background:#f3f6f9;font-family:Inter,system-ui,Segoe UI,Arial;padding:28px;display:flex;justify-content:center}
+    .card{width:100%;max-width:820px;background:white;padding:20px;border-radius:12px;box-shadow:0 8px 30px rgba(16,24,40,0.06)}
+    h1{margin:0 0 14px;font-size:20px}
+    form{display:flex;gap:8px;margin-bottom:12px}
+    input[type="text"]{flex:1;padding:10px;border-radius:8px;border:1px solid #e6e9ee}
+    button{padding:10px 12px;border-radius:8px;border:0;background:#0ea5a4;color:white;cursor:pointer}
+    .result{display:flex;gap:16px;align-items:flex-start;margin-top:12px}
+    .avatar{width:120px;height:120px;border-radius:12px;object-fit:cover;border:1px solid #eef2f7}
+    .info{flex:1}
+    .meta{color:#6b7280;font-size:13px;margin-top:6px}
+    .repos{margin-top:12px}
+    .repo{padding:8px;border-radius:8px;border:1px solid #eef2f7;margin-bottom:8px;background:#fff}
+    .error{color:#b91c1c;font-weight:600;margin-top:12px}
+    .loading{color:#0ea5a4;font-weight:600;margin-top:12px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>GitHub User Search — Assignment (API)</h1>
+    <p class="small">Enter a GitHub username (e.g. <code>torvalds</code>, <code>octocat</code>)</p>
+
+    <form id="searchForm" aria-label="Search GitHub user">
+      <input id="username" type="text" placeholder="GitHub username" required />
+      <button>Search</button>
+    </form>
+
+    <div id="status" aria-live="polite"></div>
+    <div id="resultArea"></div>
+  </div>
+
+  <script>
+    const searchForm = document.getElementById('searchForm');
+    const usernameInput = document.getElementById('username');
+    const statusEl = document.getElementById('status');
+    const resultArea = document.getElementById('resultArea');
+
+    function setStatus(text, kind='') {
+      statusEl.className = kind;
+      statusEl.textContent = text;
+    }
+
+    function clearResult() {
+      resultArea.innerHTML = '';
+    }
+
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      if (!res.ok) {
+        const data = await res.json().catch(()=>({message:res.statusText}));
+        const err = new Error(data.message || 'Request failed');
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    }
+
+    async function searchUser(username) {
+      clearResult();
+      setStatus('Loading…', 'loading');
+
+      try {
+        // fetch user profile
+        const user = await fetchJson(`https://api.github.com/users/${encodeURIComponent(username)}`);
+
+        // fetch user's repos (paginated; we will fetch first 100 repos for simplicity)
+        const repos = await fetchJson(`https://api.github.com/users/${encodeURIComponent(username)}/repos?per_page=100`);
+
+        setStatus('', '');
+
+        // Build UI
+        const wrapper = document.createElement('div');
+        wrapper.className = 'result';
+
+        const avatar = document.createElement('img');
+        avatar.src = user.avatar_url;
+        avatar.alt = user.login + ' avatar';
+        avatar.className = 'avatar';
+
+        const info = document.createElement('div');
+        info.className = 'info';
+
+        const title = document.createElement('h2');
+        title.textContent = (user.name || user.login);
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerHTML = `
+          <strong>@${user.login}</strong> • ${user.location || '—'}<br>
+          ${user.bio ? user.bio + '<br>' : ''}
+          Followers: ${user.followers} • Following: ${user.following} • Public repos: ${user.public_repos}
+        `;
+
+        const links = document.createElement('div');
+        links.style.marginTop = '8px';
+        const profLink = document.createElement('a');
+        profLink.href = user.html_url;
+        profLink.target = '_blank';
+        profLink.rel = 'noopener';
+        profLink.textContent = 'View on GitHub';
+        links.appendChild(profLink);
+
+        info.appendChild(title);
+        info.appendChild(meta);
+        info.appendChild(links);
+
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(info);
+
+        resultArea.appendChild(wrapper);
+
+        // Show top 5 repos by stargazers (desc)
+        if (Array.isArray(repos) && repos.length) {
+          const sorted = repos.slice().sort((a,b)=> (b.stargazers_count || 0) - (a.stargazers_count || 0));
+          const top = sorted.slice(0, 5);
+
+          const reposContainer = document.createElement('div');
+          reposContainer.className = 'repos';
+          const heading = document.createElement('h3');
+          heading.textContent = 'Top repositories';
+          reposContainer.appendChild(heading);
+
+          for (const r of top) {
+            const rdiv = document.createElement('div');
+            rdiv.className = 'repo';
+            rdiv.innerHTML = `
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <a href="${r.html_url}" target="_blank" rel="noopener" style="font-weight:600">${r.name}</a>
+                <span class="small">★ ${r.stargazers_count || 0}</span>
+              </div>
+              <div class="small" style="margin-top:6px">${r.description || ''}</div>
+            `;
+            reposContainer.appendChild(rdiv);
+          }
+          resultArea.appendChild(reposContainer);
+        }
+
+      } catch (err) {
+        clearResult();
+        if (err.status === 404) {
+          setStatus('User not found (404). Check the username and try again.', 'error');
+        } else {
+          setStatus('Error: ' + (err.message || 'Request failed'), 'error');
+        }
+      }
+    }
+
+    searchForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const username = usernameInput.value.trim();
+      if (!username) return;
+      searchUser(username);
+    });
+
+    // Optional: search when pressing Enter in input (form handles it)
+  </script>
+</body>
+</html>
